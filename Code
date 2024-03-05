@@ -1,0 +1,59 @@
+import queue
+import threading
+import heapq
+import time
+import random
+
+# Global constants
+X = 10  # Number of traffic signals
+N = 5   # Number of top congested locations to maintain
+NUM_PRODUCERS = 3
+NUM_CONSUMERS = 2
+
+# Bounded buffer queue
+bounded_buffer = queue.Queue(maxsize=100)
+
+# Sorted list for top congested locations
+top_congested = []
+
+def producer():
+    while True:
+        # Simulate generating traffic signal data
+        timestamp = time.time()
+        traffic_light_id = random.randint(1, X)  # X is the number of traffic signals
+        num_cars_passed = random.randint(1, 100)
+        data = (timestamp, traffic_light_id, num_cars_passed)
+        
+        # Put data into the bounded buffer
+        bounded_buffer.put(data)
+        print(f"Producer produced: {data}")
+        time.sleep(5 * 60)  # Wait for 5 minutes
+
+def consumer():
+    while True:
+        # Read from the bounded buffer
+        data = bounded_buffer.get()
+        
+        # Process data to identify congested locations
+        heapq.heappush(top_congested, (-data[2], data[1]))  # Using negative count for min heap behavior
+        if len(top_congested) > N:
+            heapq.heappop(top_congested)
+        print(f"Consumer consumed: {data}")
+        bounded_buffer.task_done()
+
+# Create and start producer threads
+for _ in range(NUM_PRODUCERS):
+    threading.Thread(target=producer, daemon=True).start()
+
+# Create and start consumer threads
+for _ in range(NUM_CONSUMERS):
+    threading.Thread(target=consumer, daemon=True).start()
+
+# Simulate for a certain duration
+simulation_duration = 3600  # 1 hour in seconds
+time.sleep(simulation_duration)
+
+# Print the top N congested locations
+print("Top Congested Locations:")
+for count, location in sorted(top_congested, reverse=True):
+    print(f"Traffic Light {location}: {abs(count)} cars passed by")
